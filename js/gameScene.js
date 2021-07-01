@@ -7,9 +7,10 @@
 // This is the Game Scene
 
 class GameScene extends Phaser.Scene {
+
   // create an alien
   createAlien () {
-    const alienXLocation = Math.floor(Math.random() * 1920) + 1 // this will get a number between 1 and 1920
+    const alienXLocation = Math.floor(Math.random() * 1920) + 1 // this will get a number between 1 and 1920;
     let alienXVelocity = Math.floor(Math.random() * 50) + 1 // this will get a number between 1 and 50;
     alienXVelocity *= Math.round(Math.random()) ? 1 : -1 // this will add minus sign in 50% of cases
     const anAlien = this.physics.add.sprite(alienXLocation, -100, 'alien')
@@ -21,16 +22,18 @@ class GameScene extends Phaser.Scene {
   constructor () {
     super({ key: 'gameScene' })
 
-    this.background = null
     this.ship = null
     this.fireMissile = false
     this.score = 0
     this.scoreText = null
     this.scoreTextStyle = { font: '65px Arial', fill: '#ffffff', align: 'center' }
+
+    this.gameOverText = null
+    this.gameOverTextStyle = { font: '65px Arial', fill: '#ff0000', align: 'center' }
   }
 
   init (data) {
-    this.cameras.main.setBackgroundColor('#ffffff')
+    this.cameras.main.setBackgroundColor('#0x5f6e7a')
   }
 
   preload () {
@@ -44,6 +47,7 @@ class GameScene extends Phaser.Scene {
     // sound
     this.load.audio('laser', 'assets/laser1.wav')
     this.load.audio('explosion', 'assets/barrelExploding.wav')
+    this.load.audio('bomb', 'assets/bomb.wav')
   }
 
   create (data) {
@@ -71,11 +75,21 @@ class GameScene extends Phaser.Scene {
       this.createAlien()
       this.createAlien()
     }.bind(this))
+
+    // Collisions between ship and aliens
+    this.physics.add.collider(this.ship, this.alienGroup, function (shipCollide, alienCollide) {
+      this.sound.play('bomb')
+      this.physics.pause()
+      alienCollide.destroy()
+      shipCollide.destroy()
+      this.gameOverText = this.add.text(1920 / 2, 1080 / 2, 'Game Over!\nClick to play again.', this.gameOverTextStyle).setOrigin(0.5)
+      this.gameOverText.setInteractive({ useHandCursor: true })
+      this.gameOverText.on('pointerdown', () => this.scene.start('gameScene'))
+    }.bind(this))
   }
 
   update (time, delta) {
     // called 60 times a second, hopefully!
-
     const keyLeftObj = this.input.keyboard.addKey('LEFT')
     const keyRightObj = this.input.keyboard.addKey('RIGHT')
     const keySpaceObj = this.input.keyboard.addKey('SPACE')
@@ -93,7 +107,6 @@ class GameScene extends Phaser.Scene {
         this.ship.x = 1920
       }
     }
-
     if (keySpaceObj.isDown === true) {
       if (this.fireMissile === false) {
         // fire missile
@@ -103,14 +116,14 @@ class GameScene extends Phaser.Scene {
         this.sound.play('laser')
       }
     }
-
+  
     if (keySpaceObj.isUp === true) {
       this.fireMissile = false
     }
 
     this.missileGroup.children.each(function (item) {
       item.y = item.y - 15
-      if (item.y < 0) {
+      if (item.y < 50) {
         item.destroy()
       }
     })
